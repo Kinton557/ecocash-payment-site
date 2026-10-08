@@ -71,16 +71,19 @@
             color: white;
             font-size: 17px;
             font-weight: bold;
+            cursor: pointer;
         }
 
         button:disabled {
             background: #999;
+            cursor: not-allowed;
         }
 
         #message {
             text-align: center;
             margin-top: 20px;
             line-height: 1.5;
+            white-space: pre-wrap;
         }
 
         .success {
@@ -137,12 +140,12 @@
 
 </div>
 
-
 <script>
 
 const BACKEND_URL =
     "https://kinton11.onrender.com/create-payment";
-    
+
+
 async function startPayment() {
 
     const amount =
@@ -158,7 +161,7 @@ async function startPayment() {
         document.getElementById("payButton");
 
 
-    // Check amount
+    // Validate amount
     if (!amount || Number(amount) <= 0) {
 
         message.className = "error";
@@ -169,7 +172,7 @@ async function startPayment() {
     }
 
 
-    // Check phone
+    // Validate phone
     if (!phone) {
 
         message.className = "error";
@@ -196,44 +199,39 @@ async function startPayment() {
                 method: "POST",
 
                 headers: {
-                    "Content-Type":
-                        "application/json"
+                    "Content-Type": "application/json"
                 },
 
                 body: JSON.stringify({
-
                     amount: Number(amount),
-
                     phone: phone
-
                 })
             }
         );
 
 
-        const data =
-            await response.json();
+        // Read response safely
+        const responseText =
+            await response.text();
+
+        let data = null;
 
 
-        let errorMessage = "Payment could not be started.";
+        try {
 
-if (data.error) {
-    errorMessage =
-        typeof data.error === "string"
-            ? data.error
-            : JSON.stringify(data.error);
-}
+            data =
+                JSON.parse(responseText);
 
-if (data.message) {
-    errorMessage = data.message;
-}
+        } catch {
 
-if (data.details) {
-    errorMessage +=
-        "\n" + JSON.stringify(data.details);
-}
+            console.error(
+                "Server returned non-JSON:",
+                responseText
+            );
 
-throw new Error(errorMessage);
+            throw new Error(
+                "The payment server returned an unexpected response."
+            );
         }
 
 
@@ -243,6 +241,60 @@ throw new Error(errorMessage);
         );
 
 
+        // Handle API errors
+        if (!response.ok) {
+
+            let errorMessage =
+                "Payment could not be started.";
+
+
+            if (typeof data.error === "string") {
+
+                errorMessage =
+                    data.error;
+
+            }
+
+            else if (data.error) {
+
+                errorMessage =
+                    JSON.stringify(
+                        data.error,
+                        null,
+                        2
+                    );
+
+            }
+
+            else if (data.message) {
+
+                errorMessage =
+                    data.message;
+
+            }
+
+
+            // Show useful Payonify details
+            if (data.details) {
+
+                errorMessage +=
+                    "\n\nDetails:\n" +
+                    JSON.stringify(
+                        data.details,
+                        null,
+                        2
+                    );
+
+            }
+
+
+            throw new Error(
+                errorMessage
+            );
+        }
+
+
+        // Successful payment
         if (
             data.status ===
             "requires_authorization"
@@ -251,7 +303,7 @@ throw new Error(errorMessage);
             message.className = "success";
 
             message.innerText =
-                "Payment request sent! Check your EcoCash phone and follow the prompt.";
+                "Payment request sent!\n\nCheck your EcoCash phone and follow the prompt.";
 
         }
 
@@ -262,7 +314,7 @@ throw new Error(errorMessage);
             message.className = "info";
 
             message.innerText =
-                "Payment is processing. Please wait...";
+                "Payment is processing.\n\nPlease wait...";
 
         }
 
@@ -283,14 +335,20 @@ throw new Error(errorMessage);
 
             message.innerText =
                 "Payment status: " +
-                (data.status || "processing");
+                (
+                    data.status ||
+                    "processing"
+                );
 
         }
 
 
     } catch (error) {
 
-        console.error(error);
+        console.error(
+            "Payment error:",
+            error
+        );
 
         message.className = "error";
 
@@ -309,4 +367,4 @@ throw new Error(errorMessage);
 </script>
 
 </body>
-  </html>
+</html>
