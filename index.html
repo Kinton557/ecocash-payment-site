@@ -215,13 +215,25 @@ async function startPayment() {
             await response.json();
 
 
-        if (!response.ok) {
+        let errorMessage = "Payment could not be started.";
 
-            throw new Error(
-                data.error ||
-                "Payment could not be started."
-            );
+if (data.error) {
+    errorMessage =
+        typeof data.error === "string"
+            ? data.error
+            : JSON.stringify(data.error);
+}
 
+if (data.message) {
+    errorMessage = data.message;
+}
+
+if (data.details) {
+    errorMessage +=
+        "\n" + JSON.stringify(data.details);
+}
+
+throw new Error(errorMessage);
         }
 
 
